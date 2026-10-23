@@ -1,0 +1,9 @@
+# Local agent runtime and task artifacts
+.pi/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
