@@ -1,0 +1,36 @@
+{
+  "name": "pi-s1-compact",
+  "private": true,
+  "packageManager": "pnpm@11.20.0",
+  "description": "Pi System One Compact: persistent classifier selection for safe tool-output pruning",
+  "type": "module",
+  "license": "MIT",
+  "author": "Nicola Mustone",
+  "contributors": ["Nour Helmi", "tamaratran"],
+  "engines": { "node": ">=22.19.0" },
+  "pi": { "extensions": ["./extensions/s1-compact.ts"] },
+  "files": ["extensions", "src", "README.md", "LICENSE", "NOTICE.md", "licenses"],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:engine": "vitest run tests/engine.spec.ts",
+    "check": "pnpm run typecheck && pnpm test && pnpm run test:engine",
+    "check:compatibility": "node scripts/check-compatibility.mjs"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=1.0.0 <2",
+    "@earendil-works/pi-agent-core": ">=1.0.0 <2",
+    "@earendil-works/pi-ai": ">=1.0.0 <2",
+    "typebox": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.4.0",
+    "@earendil-works/pi-agent-core": "1.4.0",
+    "@earendil-works/pi-ai": "1.4.0",
+    "@types/node": "^22.20.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2",
+    "typebox": "^1.3.24",
+    "vitest": "^5.0.3"
+  }
+}
