@@ -2,9 +2,9 @@
 
 ## Context and ownership
 
-Pi System One Compact (`pi-s1-compact`) is a general-purpose Pi compaction extension, similar to pi-nimble-compact. SirDarcanos confirms product intent, permission changes, and consequential commitments. Implementation details, stack, maintenance resources, and operating constraints await the handoff; do not invent them.
+Pi System One Compact (`pi-s1-compact`) is a general-purpose Pi compaction extension, similar to pi-nimble-compact. SirDarcanos confirms product intent, permission changes, and consequential commitments. The approved handoff builds a separate local successor using Pi's classifier registry, retaining local Ollama Nimble by default and predecessor session/tool/environment compatibility. The predecessor repository is read-only; publishing, migration announcements, and deprecation are excluded. Maintenance resources and unconfirmed operating constraints remain unknown.
 
-Read this agreement before project work. Maintain confirmed policy here and update affected documentation during authorized changes. No application, build commands, tests, packaging, or CI exist yet; discover actual configuration after implementation rather than documenting guessed commands.
+Read this agreement before project work. Maintain confirmed policy here and update affected documentation during authorized changes. The TypeScript extension targets Pi >=1.0.0 <2 and Node >=22.19. Use pnpm (not npm): `pnpm install --ignore-scripts`, `pnpm typecheck`, `pnpm test`, `pnpm test:engine`, `pnpm check`, or `pnpm check:compatibility` (isolated Pi 1.0.0/1.4.0 installs); package.json is authoritative. Local dependency installation was approved for this build. No CI or publishing automation is configured. Tests are offline; live classifier quality, service startup, and hosted spending require their own authority.
 
 ## Scope and safety
 
@@ -34,7 +34,7 @@ The lead owns integration, findings, and acceptance recommendations. Inspect fin
 
 ## Versions and history
 
-Use one repository-wide Semantic Versioning release unit. Before 1.0, breaking changes increment minor; compatible additions and fixes increment patch. At/after 1.0, incompatible public changes increment major, compatible functionality minor, and compatible fixes patch. Choose impact from delivered behavior, not merely issue type. No version source or automation exists yet; establish the manifest source during authorized implementation, without inventing a version now.
+Use one repository-wide Semantic Versioning release unit. Before 1.0, breaking changes increment minor; compatible additions and fixes increment patch. At/after 1.0, incompatible public changes increment major, compatible functionality minor, and compatible fixes patch. Choose impact from delivered behavior, not merely issue type. package.json owns package metadata but intentionally has no release version and is private during local successor work. No release automation is configured; version assignment still needs approval.
 
 Maintain [CHANGELOG.md](CHANGELOG.md) manually with Keep a Changelog-style categories and notable user-facing changes under Unreleased. Non-user-facing work may omit an entry with a reason. Preserve released history; release preparation evaluates aggregate impact and the pre-1.0 exception. SirDarcanos must explicitly approve version bumps, tags, GitHub releases, package publishing, and deployment; labels never grant that authority.
 

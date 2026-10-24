@@ -1,6 +1,11 @@
 # Local agent runtime and task artifacts
 .pi/
 
+# Local development dependencies and generated files
+node_modules/
+coverage/
+.DS_Store
+
 # Secrets
 .env
 .env.*
