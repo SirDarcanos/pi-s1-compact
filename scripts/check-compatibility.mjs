@@ -55,7 +55,7 @@ for (const version of versions) {
     writeFileSync(join(sandbox, "pnpm-workspace.yaml"), "packages:\n  - .\noverrides:\n"
       + suitePackages.map(name => `  ${JSON.stringify(name)}: ${JSON.stringify(version)}`).join("\n") + "\n");
     writeFileSync(join(sandbox, "package.json"), JSON.stringify(isolated, null, 2) + "\n");
-    const env = { ...process.env, CI: "true", PI_NIMBLE_LIVE: "0", S1_COMPACT_EXPECT_PI_VERSION: version };
+    const env = { ...process.env, CI: "true", PI_S1_COMPACT_LIVE: "0", PI_NIMBLE_LIVE: "0", S1_COMPACT_EXPECT_PI_VERSION: version };
     run(["install", "--ignore-scripts", "--no-frozen-lockfile", "--prod=false"], sandbox, env);
     for (const name of sdkPackages) {
       const installed = JSON.parse(readFileSync(join(sandbox, "node_modules", name, "package.json"), "utf8"));
