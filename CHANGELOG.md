@@ -10,7 +10,15 @@ No releases have been published.
 
 - Separate Pi System One Compact extension with saved classifier selection, automatic-pruning controls, status, and reset commands.
 - Pi 1.0.0+ classifier registry integration with local Ollama Nimble defaults and destination confirmation before saving.
-- Historical Nimble session/retrieval compatibility, command aliases, and fail-closed standby when another legacy pruner is loaded.
+- Historical Nimble session/retrieval compatibility and fail-closed standby when another legacy pruner is loaded.
+
+### Removed
+
+- Legacy `/nimble-compact`, `/nimble-settings`, `/nimble-status`, and `/nimble-reset` aliases; use `/s1-compact*` commands instead. Historical retrieval through `nimble_read` remains supported.
+
+### Fixed
+
+- Fit growing classifier history into fixed request budgets by progressively abridging excerpts and reducing batches; retain outputs when no request fits, without pausing future scoring or labeling the error as Nimble-specific.
 
 ### Security
 
