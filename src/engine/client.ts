@@ -1,12 +1,13 @@
+import { compactEnvironmentValue } from '../environment.js';
 import { buildNimbleRequest, parseNimbleResponse } from './request.js';
 import type { NimbleAsker, NimbleQuestions, NimbleResponse, NimbleState } from './types.js';
 
 export interface NimbleClientOptions {
-  /** Defaults to `process.env.NIMBLE_API_KEY`. */
+  /** Defaults to PI_S1_COMPACT_API_KEY, falling back to NIMBLE_API_KEY. */
   apiKey?: string;
-  /** Defaults to PI_NIMBLE_MODEL or Ollama's `nimble`. */
+  /** Defaults to PI_S1_COMPACT_MODEL, then PI_NIMBLE_MODEL or Ollama's `nimble`. */
   model?: string;
-  /** Defaults to PI_NIMBLE_URL or Ollama's loopback System One endpoint. */
+  /** Defaults to PI_S1_COMPACT_URL, then PI_NIMBLE_URL or Ollama's loopback endpoint. */
   baseUrl?: string;
   /** Defaults to the global `fetch`. */
   fetch?: typeof fetch;
@@ -22,9 +23,9 @@ export class NimbleClient implements NimbleAsker {
   private readonly timeoutMs: number;
 
   constructor(options: NimbleClientOptions = {}) {
-    this.apiKey = options.apiKey ?? process.env.NIMBLE_API_KEY ?? '';
-    this.model = options.model ?? process.env.PI_NIMBLE_MODEL;
-    this.baseUrl = options.baseUrl ?? process.env.PI_NIMBLE_URL;
+    this.apiKey = options.apiKey ?? compactEnvironmentValue(process.env, 'API_KEY') ?? '';
+    this.model = options.model ?? compactEnvironmentValue(process.env, 'MODEL');
+    this.baseUrl = options.baseUrl ?? compactEnvironmentValue(process.env, 'URL');
     this.fetcher = options.fetch ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 30_000;
   }

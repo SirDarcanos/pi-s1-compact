@@ -6,6 +6,7 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import { applyPruning, candidates, configuration, MAX_REQUEST_BYTES, MAX_REQUEST_TOKENS, requestBody, score, type Config } from "../src/pruning.ts";
 import { estimateTokens } from "../src/engine/state.ts";
 import { validateEndpoint } from "../src/engine/request.ts";
+import { compactEnvironmentValue } from "../src/environment.ts";
 
 const config: Config = { ...configuration({}), keepRecentTokens: 2_000 };
 function history(): AgentMessage[] {
@@ -172,7 +173,7 @@ test("Nimble keys are optional and sent only to the configured endpoint", async 
   assert.ok(called);
 });
 
-test("live local Ollama accepts the plugin's actual Nimble request", { skip: process.env.PI_NIMBLE_LIVE !== "1" }, async t => {
+test("live local Ollama accepts the plugin's actual Nimble request", { skip: compactEnvironmentValue(process.env, "LIVE") !== "1" }, async t => {
   // Deliberately ignore endpoint/key environment overrides: only synthetic data
   // goes to local Ollama, never a remote service or the user's active session.
   const local = { ...configuration({}), keepRecentTokens: 2_000, timeoutMs: 120_000 };

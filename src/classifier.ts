@@ -137,10 +137,10 @@ function requestPaths(model: Classifier): Set<string> | undefined {
 
 /** Register the narrow Ollama wire adapter behind Pi's classifier/authentication registry. */
 export function registerLocalNimble(pi: ExtensionAPI, config: Config): string | undefined {
-  if (!config.endpoint) return "Pruning disabled by empty PI_NIMBLE_URL";
+  if (!config.endpoint) return "Local provider disabled by empty PI_S1_COMPACT_URL (or legacy PI_NIMBLE_URL)";
   try {
     const endpoint = new URL(validateEndpoint(config.endpoint));
-    if (!endpoint.pathname.endsWith("/systemone")) throw new Error("PI_NIMBLE_URL must end in /systemone");
+    if (!endpoint.pathname.endsWith("/systemone")) throw new Error("PI_S1_COMPACT_URL (or legacy PI_NIMBLE_URL) must end in /systemone");
     endpoint.pathname = endpoint.pathname.slice(0, -"systemone".length);
     pi.registerProvider(LOCAL_PROVIDER, {
       name: "S1 Compact · Ollama Nimble",

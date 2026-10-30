@@ -4,6 +4,7 @@ import { estimateTokens, type SessionEntry } from "@earendil-works/pi-coding-age
 import { collectToolCalls, estimateTokens as estimateRequestTokens, fitState, StateBudgetError } from "./engine/state.ts";
 import type { Message } from "./engine/types.ts";
 import { DEFAULT_MODEL, SYSTEM_ONE_URL, validateEndpoint } from "./engine/request.ts";
+import { compactEnvironmentValue } from "./environment.ts";
 
 export const ENTRY_TYPE = "pi-nimble-pruning";
 export const MAX_REQUEST_TOKENS = 6_000;
@@ -31,18 +32,19 @@ function number(value: string | undefined, fallback: number, min: number, max: n
 }
 
 export function configuration(env: NodeJS.ProcessEnv = process.env): Config {
+  const value = (key: Parameters<typeof compactEnvironmentValue>[1]) => compactEnvironmentValue(env, key);
   return {
-    endpoint: env.PI_NIMBLE_URL?.trim() ?? SYSTEM_ONE_URL,
-    apiKey: env.NIMBLE_API_KEY?.trim() ?? "",
-    model: env.PI_NIMBLE_MODEL?.trim() || DEFAULT_MODEL,
-    threshold: number(env.PI_NIMBLE_THRESHOLD, 0.45, 0.1, 0.95),
-    triggerTokens: number(env.PI_NIMBLE_TRIGGER_TOKENS, 120_000, 8_000, 2_000_000),
-    keepThreshold: number(env.PI_NIMBLE_KEEP_THRESHOLD, 0.25, 0, 1),
-    keepRecentTokens: number(env.PI_NIMBLE_KEEP_RECENT_TOKENS, 12_000, 2_000, 100_000),
-    maxPaybackTurns: number(env.PI_NIMBLE_MAX_PAYBACK_TURNS, 20, 1, 1_000),
-    timeoutMs: number(env.PI_NIMBLE_TIMEOUT_MS, 30_000, 100, 180_000),
+    endpoint: value("URL")?.trim() ?? SYSTEM_ONE_URL,
+    apiKey: value("API_KEY")?.trim() ?? "",
+    model: value("MODEL")?.trim() || DEFAULT_MODEL,
+    threshold: number(value("THRESHOLD"), 0.45, 0.1, 0.95),
+    triggerTokens: number(value("TRIGGER_TOKENS"), 120_000, 8_000, 2_000_000),
+    keepThreshold: number(value("KEEP_THRESHOLD"), 0.25, 0, 1),
+    keepRecentTokens: number(value("KEEP_RECENT_TOKENS"), 12_000, 2_000, 100_000),
+    maxPaybackTurns: number(value("MAX_PAYBACK_TURNS"), 20, 1, 1_000),
+    timeoutMs: number(value("TIMEOUT_MS"), 30_000, 100, 180_000),
     // Zero disables the retained-output shortening tier.
-    truncateMinChars: number(env.PI_NIMBLE_TRUNCATE_MIN_CHARS, 4_000, 0, 2_000_000),
+    truncateMinChars: number(value("TRUNCATE_MIN_CHARS"), 4_000, 0, 2_000_000),
   };
 }
 

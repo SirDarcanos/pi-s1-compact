@@ -62,27 +62,31 @@ The extension registers the narrowly scoped provider `s1-compact-ollama`, model 
 
 The default local provider and second registry transport have offline wire-contract tests. Those prove integration behavior, **not live model availability, calibration, or pruning quality**. No hosted inference is needed for the test suite.
 
-### Legacy environment precedence
+### Environment configuration and precedence
 
 1. A valid persisted classifier/automatic choice wins. No project-level override exists.
-2. Without a settings file, the legacy endpoint/model environment selects the bootstrap local Nimble provider; automatic pruning defaults on. Remote legacy endpoints require confirmation through the settings UI before scoring.
+2. Without a settings file, the endpoint/model environment selects the bootstrap local Nimble provider; automatic pruning defaults on. Remote bootstrap endpoints require confirmation through the settings UI before scoring.
 3. Otherwise, use loopback Ollama Nimble.
 
-`PI_NIMBLE_URL` (default `http://127.0.0.1:11434/v1/systemone`), `PI_NIMBLE_MODEL` (default `nimble`), and `NIMBLE_API_KEY` configure only the compatibility provider, never another selected provider. The URL must end in `/systemone`; HTTPS or loopback HTTP only, with no embedded credentials, query, or fragment. An empty URL disables that provider; it does not disable an explicitly selected unrelated registry classifier. Pi's normal provider overrides/authentication still apply and a changed destination requires confirmation.
+Use `PI_S1_COMPACT_*` names for new configuration. Each variable takes precedence over its matching `PI_NIMBLE_*` fallback; `PI_S1_COMPACT_API_KEY` falls back to `NIMBLE_API_KEY`. Fallback applies only when the new variable is unset. An empty or invalid new value is validated/defaulted normally, without consulting the legacy value.
 
-These legacy policy variables continue to apply independently of classifier selection:
+`PI_S1_COMPACT_URL` (default `http://127.0.0.1:11434/v1/systemone`), `PI_S1_COMPACT_MODEL` (default `nimble`), and `PI_S1_COMPACT_API_KEY` configure only the compatibility provider, never another selected provider. The URL must end in `/systemone`; HTTPS or loopback HTTP only, with no embedded credentials, query, or fragment. An empty URL disables that provider; it does not disable an explicitly selected unrelated registry classifier. Pi's normal provider overrides/authentication still apply and a changed destination requires confirmation.
+
+These policy variables apply independently of classifier selection:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PI_NIMBLE_THRESHOLD` | `0.45` | Automatic context-window fraction |
-| `PI_NIMBLE_TRIGGER_TOKENS` | `120000` | Absolute automatic trigger ceiling |
-| `PI_NIMBLE_KEEP_RECENT_TOKENS` | `12000` | Protected recent context, expanded to whole parallel batches |
-| `PI_NIMBLE_MAX_PAYBACK_TURNS` | `20` | Cache-rewrite payback horizon |
-| `PI_NIMBLE_TIMEOUT_MS` | `30000` | Scoring deadline |
-| `PI_NIMBLE_TRUNCATE_MIN_CHARS` | `4000` | Shorten explicitly retained long outputs; `0` disables |
-| `PI_NIMBLE_KEEP_THRESHOLD` | `0.25` | Nimble-profile keep threshold only; not transferred to other models |
+| `PI_S1_COMPACT_THRESHOLD` | `0.45` | Automatic context-window fraction |
+| `PI_S1_COMPACT_TRIGGER_TOKENS` | `120000` | Absolute automatic trigger ceiling |
+| `PI_S1_COMPACT_KEEP_RECENT_TOKENS` | `12000` | Protected recent context, expanded to whole parallel batches |
+| `PI_S1_COMPACT_MAX_PAYBACK_TURNS` | `20` | Cache-rewrite payback horizon |
+| `PI_S1_COMPACT_TIMEOUT_MS` | `30000` | Scoring deadline |
+| `PI_S1_COMPACT_TRUNCATE_MIN_CHARS` | `4000` | Shorten explicitly retained long outputs; `0` disables |
+| `PI_S1_COMPACT_KEEP_THRESHOLD` | `0.25` | Nimble-profile keep threshold only; not transferred to other models |
 
-Invalid numeric environment values use bounded defaults, as in the predecessor.
+Invalid numeric environment values use bounded defaults, as in the predecessor. Environment settings are read when the extension is loaded; after editing shell exports, start Pi from a new terminal (or source the exports before restarting Pi). `/reload` does not refresh the parent shell environment.
+
+The opt-in live test uses `PI_S1_COMPACT_LIVE=1` (`PI_NIMBLE_LIVE` remains a fallback). Offline compatibility checks force both opt-in variables off.
 
 ## Safety and compatibility
 
