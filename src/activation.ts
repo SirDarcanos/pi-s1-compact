@@ -10,10 +10,10 @@ export function activationConflict(pi: Pick<ExtensionAPI, "getCommands">): strin
     const foreign = commands.filter(c => /^nimble-(?:compact|reset|status)(?::\d+)?$/.test(c.name)
       && (!c.sourceInfo?.path || c.sourceInfo.path !== owner));
     if (foreign.length) return `Legacy pruner active at ${foreign[0]!.sourceInfo?.path || "unknown source"}; unload one extension`;
-    // Missing aliases may mean another registration displaced or obscured ownership. Fail closed.
-    for (const alias of ["nimble-compact", "nimble-reset", "nimble-status"]) {
-      if (commands.filter(c => c.name === alias && c.sourceInfo?.path === owner).length !== 1) {
-        return "Ambiguous compatibility command ownership; unload duplicate extensions";
+    // Missing native commands may mean a registration displaced or obscured ownership. Fail closed.
+    for (const name of ["s1-compact-settings", "s1-compact-reset", "s1-compact-status"]) {
+      if (commands.filter(c => c.name === name && c.sourceInfo?.path === owner).length !== 1) {
+        return "Ambiguous S1 command ownership; unload duplicate extensions";
       }
     }
   } catch { return "Pruning ownership unavailable; Pi >=1.0.0 is required"; }

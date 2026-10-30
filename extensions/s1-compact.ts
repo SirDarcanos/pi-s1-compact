@@ -2,7 +2,7 @@
 import { Type } from "typebox";
 import { buildSessionContext, estimateTokens, type ExtensionAPI, type ExtensionContext, type SessionEntry, type SessionManager } from "@earendil-works/pi-coding-agent";
 import { affordableReductions, applyPruning, candidates, configuration, ENTRY_TYPE, GROWTH_TOKENS,
-  ledger, original, superseded, textOf, triggerTokens, truncationLedger, type Config } from "../src/pruning.ts";
+  ledger, original, superseded, textOf, triggerTokens, truncationLedger, RequestBudgetError, type Config } from "../src/pruning.ts";
 import { abortable, authenticateClassifier, defaultSettings, destinationLabel, registerLocalNimble, resolveClassifier, scoreClassifier, selectionWithAuth } from "../src/classifier.ts";
 import { fileSettingsStore, LOCAL_PROVIDER, type Settings, type SettingsStore } from "../src/settings.ts";
 import { activationConflict } from "../src/activation.ts";
@@ -191,6 +191,12 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
       } catch (error) {
         if (epoch !== ownEpoch || ownController.signal.aborted) return;
         lastStatus = error instanceof Error ? error.message : "Classifier unavailable; no fallback";
+        if (error instanceof RequestBudgetError) {
+          // No evidence-scoring request or reductions occurred. Growth/cooldown still
+          // gates automatic attempts; a size skip is not a provider failure.
+          warned = false;
+          return;
+        }
         if (!manual && !warned) notify(ctx, `${lastStatus}. Scoring paused; context unchanged; normal compaction remains available.`, true);
         warned = true;
       } finally {
@@ -230,7 +236,6 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     },
   };
   pi.registerCommand("s1-compact", compactCommand);
-  pi.registerCommand("nimble-compact", compactCommand);
   pi.registerTool({
     name: "nimble_read", label: "Read original output",
     description: "Retrieve original tool output cleared or truncated by pi-s1-compact or pi-nimble from this session's active branch. Use the ref in its marker. Read original evidence rather than rerunning commands. offset and limit are character counts; maximum page 16000 characters.",
@@ -264,7 +269,6 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     },
   };
   pi.registerCommand("s1-compact-reset", resetCommand);
-  pi.registerCommand("nimble-reset", resetCommand);
   const statusCommand: Parameters<ExtensionAPI["registerCommand"]>[1] = {
     description: "Show saved classifier, automatic pruning configuration, and activity",
     handler: async (_args, ctx) => {
@@ -295,7 +299,6 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     },
   };
   pi.registerCommand("s1-compact-status", statusCommand);
-  pi.registerCommand("nimble-status", statusCommand);
   const settingsCommand: Parameters<ExtensionAPI["registerCommand"]>[1] = {
     description: "Choose and persist a classifier and toggle automatic pruning",
     handler: async (args, ctx) => {
@@ -359,6 +362,5 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     },
   };
   pi.registerCommand("s1-compact-settings", settingsCommand);
-  pi.registerCommand("nimble-settings", settingsCommand);
 }
 export default function s1Compact(pi: ExtensionAPI): void { registerS1(pi); }

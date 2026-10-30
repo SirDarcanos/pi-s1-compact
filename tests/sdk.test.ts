@@ -429,7 +429,7 @@ for (const order of ["legacy-first","successor-first"] as const) {
     const runner=(session as any)._extensionRunner;
     assert.ok(runner,"SDK extension runner is bound");
     const commands=runner.getRegisteredCommands();
-    assert.equal(commands.filter((c:any)=>c.name==="nimble-compact").length,2);
+    assert.equal(commands.filter((c:any)=>c.name==="nimble-compact").length,1);
     const successorCommand=commands.find((c:any)=>c.name==="s1-compact");
     const context=runner.createContext();
     await successorCommand.handler("",{...context,waitForIdle:async()=>{}});

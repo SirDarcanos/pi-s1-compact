@@ -4,12 +4,20 @@ import { mkdtemp, readFile, writeFile, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { buildSessionContext, SessionManager } from "@earendil-works/pi-coding-agent";
-import { applyPruning, candidates, superseded, ENTRY_TYPE, ledger, original, reference, textOf, truncationLedger } from "../src/pruning.ts";
+import { applyPruning, candidates, superseded, ENTRY_TYPE, ledger, original, reference, textOf, truncationLedger, RequestBudgetError } from "../src/pruning.ts";
 import { fileSettingsStore, parseSettings } from "../src/settings.ts";
 import { defaultSettings, selection } from "../src/classifier.ts";
 import { config, flush, harness, memoryStore, messages, second } from "./harness.ts";
 
 const context = (h: Awaited<ReturnType<typeof harness>>) => buildSessionContext(h.sm.getBranch()).messages;
+
+test("only S1 commands are registered; historical retrieval remains available", async () => {
+  const h = await harness();
+  assert.deepEqual([...h.commands.keys()].sort(), ["s1-compact", "s1-compact-reset", "s1-compact-settings", "s1-compact-status"]);
+  assert.ok(h.tools.has("nimble_read"));
+  await h.command("s1-compact");
+  assert.equal(h.sent.length, 1, "native commands activate pruning without legacy aliases");
+});
 
 test("settings are atomic, user-global, strict, and survive reload; corrupt JSON pauses without fallback", async t => {
   const dir = await mkdtemp(join(tmpdir(), "s1-store-")); t.after(()=>rm(dir,{recursive:true}));
@@ -253,7 +261,7 @@ test("unscored candidates are never truncated; retained candidates shorten and r
   const h=await harness({probability:0.99});await h.command("s1-compact");
   assert.equal(truncationLedger(h.sm.getBranch()).size,1);assert.equal(ledger(h.sm.getBranch()).size,0);
   assert.match(JSON.stringify(applyPruning(context(h),ledger(h.sm.getBranch()),truncationLedger(h.sm.getBranch()))),/truncated/);
-  await h.command("nimble-reset");assert.equal(truncationLedger(h.sm.getBranch()).size,0);
+  await h.command("s1-compact-reset");assert.equal(truncationLedger(h.sm.getBranch()).size,0);
 });
 
 for(const boundary of ["session_tree","session_before_compact","session_compact","model_select","session_shutdown"]){
@@ -310,6 +318,32 @@ test("failed reset persistence preserves both masks and branch leaf",async()=>{
   const h=await harness({probability:0.99});await h.command("s1-compact");const leaf=h.sm.getLeafId();
   (h.pi as any).appendEntry=(type:string,data:unknown)=>{h.sm.appendCustomEntry(type,data);throw new Error("Disk full");};
   await h.command("s1-compact-reset");assert.equal(h.sm.getLeafId(),leaf);assert.equal(truncationLedger(h.sm.getBranch()).size,1);
+});
+
+test("registry scoring fits long Unicode history without increasing its history budget", async () => {
+  const h = await harness({ probability: 1, store: memoryStore({ version: 1, automatic: true, classifier: selection(second) }) });
+  for (let i = 0; i < 3; i++) h.sm.appendMessage({ role: "user", content: "漢字".repeat(5000), timestamp: 10 + i });
+  await h.command("s1-compact");
+  assert.equal(h.sent.length, 1);
+  assert.ok(!h.notices.some(notice => /Scoring paused|history too large/.test(notice)));
+  assert.equal(ledger(h.sm.getBranch()).size, 0, "retained evidence is not cleared");
+});
+
+test("budget skips retain outputs without pausing future scoring", async () => {
+  const h = await harness({ classify: async () => { throw new RequestBudgetError("Classifier evaluation skipped: fixed context budget"); } });
+  await h.command("s1-compact");
+  assert.equal(ledger(h.sm.getBranch()).size, 0);
+  assert.equal(truncationLedger(h.sm.getBranch()).size, 0);
+  await h.command("s1-compact-status");
+  assert.match(h.notices.at(-1)!, /Scoring: ready/);
+  assert.match(h.notices.at(-1)!, /Classifier evaluation skipped/);
+  assert.ok(!h.notices.some(notice => /Scoring paused/.test(notice)));
+  const attempts = h.sent.length;
+  await h.fire("turn_end"); await flush();
+  assert.equal(h.sent.length, attempts, "unchanged history does not spin on a size skip");
+  h.sm.appendMessage({ role: "user", content: "additional context ".repeat(10000), timestamp: 10 });
+  await h.fire("turn_end"); await flush();
+  assert.equal(h.sent.length, attempts + 1, "growth can trigger another evaluation after a size skip");
 });
 
 test("local versus registry thresholds and budgets are not transferred between classifiers",async()=>{
