@@ -1,4 +1,20 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { activeRetrievalTool, type RetrievalTool } from "./pruning.ts";
+
+/** Active names are insufficient: Pi keeps the first tool registration on collisions. */
+export function ownedRetrievalTool(pi: Pick<ExtensionAPI, "getCommands" | "getAllTools" | "getActiveTools">): RetrievalTool | undefined {
+  try {
+    const commands = pi.getCommands().filter(c => c.source === "extension" && /^s1-compact(?::\d+)?$/.test(c.name));
+    if (commands.length !== 1 || !commands[0]?.sourceInfo?.path) return;
+    const owner = commands[0].sourceInfo.path;
+    const tools = pi.getAllTools();
+    const owned = pi.getActiveTools().filter(name => {
+      const registrations = tools.filter(tool => tool.name === name);
+      return registrations.length === 1 && registrations[0]?.sourceInfo?.path === owner;
+    });
+    return activeRetrievalTool(owned);
+  } catch { return undefined; }
+}
 
 /** Inspect bound registrations, not package names. The unmodified legacy extension cannot honor a new lock. */
 export function activationConflict(pi: Pick<ExtensionAPI, "getCommands">): string | undefined {

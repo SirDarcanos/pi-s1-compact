@@ -18,7 +18,7 @@ test("retains head/tail and original retrieval ref without mutating evidence", (
   const text = projected.content[0].text;
   assert(text.startsWith("HEAD"));
   assert(text.endsWith("Tests: 36 passed, 4 skipped, 0 failed."));
-  assert(text.includes(`nimble_read({"ref":"${ref}"})`));
+  assert(text.includes(`s1_compact_read({"ref":"${ref}"})`));
   assert.strictEqual(projected.details, source.details);
   assert.equal(projected.toolCallId, source.toolCallId);
   assert.deepEqual(source, original);

@@ -9,8 +9,8 @@ export function projectTruncated(messages: readonly AgentMessage[], refs: Readon
     const text = textOf(message);
     if (text.length <= 600) return message;
     const ref = reference(message);
-    const marker = `[pi-nimble experiment: ${text.length - 600} characters omitted from this tool output; `
-      + `full original retained in this session. Retrieve with nimble_read({"ref":"${ref}"}). `
+    const marker = `[pi-s1-compact experiment: ${text.length - 600} characters omitted from this tool output; `
+      + `full original retained in this session. Retrieve with s1_compact_read({"ref":"${ref}"}). `
       + "Do not rerun a side-effecting command to recover its output.]";
     const shortened = `${text.slice(0, 300)}\n${marker}\n${text.slice(-300)}`;
     if (shortened.length >= text.length) return message;

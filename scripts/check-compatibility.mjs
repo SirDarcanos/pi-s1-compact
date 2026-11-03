@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { validateCompatibilityVersions } from "./compatibility-policy.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const requested = process.argv.slice(2);
@@ -12,7 +13,7 @@ const sdkPackages = ["@earendil-works/pi-coding-agent", "@earendil-works/pi-agen
 const suitePackages = [...sdkPackages, ...["pi-codemode", "pi-mcp", "pi-tui", "pi-telemetry", "chord"]
   .map(name => `@earendil-works/${name}`)];
 const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-for (const version of versions) assert.match(version, /^1\.\d+\.\d+$/, "Use an exact stable Pi 1.x version");
+validateCompatibilityVersions(versions);
 
 function verifySuite(version, cwd, env) {
   const tree = spawnSync("pnpm", ["list", "--depth", "Infinity", "--json"], {
@@ -52,7 +53,7 @@ for (const version of versions) {
     // Pi 1.0's published packages use caret dependencies. Pin the whole suite so
     // an older-baseline run cannot silently exercise newer transitive SDK code.
     // pnpm 11 reads overrides from pnpm-workspace.yaml, not package.json.
-    writeFileSync(join(sandbox, "pnpm-workspace.yaml"), "packages:\n  - .\noverrides:\n"
+    writeFileSync(join(sandbox, "pnpm-workspace.yaml"), readFileSync(join(root, "pnpm-workspace.yaml"), "utf8")
       + suitePackages.map(name => `  ${JSON.stringify(name)}: ${JSON.stringify(version)}`).join("\n") + "\n");
     writeFileSync(join(sandbox, "package.json"), JSON.stringify(isolated, null, 2) + "\n");
     const env = { ...process.env, CI: "true", PI_S1_COMPACT_LIVE: "0", PI_NIMBLE_LIVE: "0", S1_COMPACT_EXPECT_PI_VERSION: version };
