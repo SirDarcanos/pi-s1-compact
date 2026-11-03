@@ -1,0 +1,95 @@
+name: Stage npm release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Approved stable version (must match package.json)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-staged-publish
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'SirDarcanos/pi-s1-compact' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PI_S1_COMPACT_LIVE: '0'
+      PI_NIMBLE_LIVE: '0'
+      EXPECTED_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.20.0
+          run_install: false
+      - name: Confirm approved version and metadata
+        run: node scripts/check-release.mjs
+      - name: Install without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run offline checks
+        run: pnpm check
+      - name: Pack and inspect distribution
+        run: |
+          pnpm pack --out "$RUNNER_TEMP/pi-s1-compact.tgz"
+          node scripts/check-release.mjs "$RUNNER_TEMP/pi-s1-compact.tgz"
+          sha256sum "$RUNNER_TEMP/pi-s1-compact.tgz"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/pi-s1-compact.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  stage:
+    needs: verify
+    if: github.repository == 'SirDarcanos/pi-s1-compact' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      EXPECTED_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/npm-package
+      - name: Recheck the verified tarball
+        run: node scripts/check-release.mjs "$RUNNER_TEMP/npm-package/pi-s1-compact.tgz"
+      - name: Stage with npm OIDC (never publish directly)
+        run: >-
+          pnpm --package=npm@11.21.0 dlx npm stage publish
+          "$RUNNER_TEMP/npm-package/pi-s1-compact.tgz"
+          --access public --tag latest --ignore-scripts --provenance
+          --registry=https://registry.npmjs.org/
+      - name: Record manual approval requirement
+        run: |
+          echo 'Package staged only. Review the stage ID in the log and the tarball in the npm-package artifact.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'SirDarcanos must approve the staged package on npm with 2FA before it becomes public.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'If this version is already staged or published, do not bump, reject, or retry automatically.' >> "$GITHUB_STEP_SUMMARY"
