@@ -2,9 +2,15 @@
 
 Record notable user-facing changes here under Unreleased as they are implemented.
 Use Keep a Changelog-style categories and the version policy in [AGENTS.md](https://github.com/SirDarcanos/pi-s1-compact/blob/main/AGENTS.md#versions-and-history).
-Version 0.1.0 is published on npm. Changes below Unreleased are not part of that immutable package.
+Release headings record prepared versions; public availability requires npm approval. Changes under Unreleased are not part of a prepared release.
 
 ## Unreleased
+
+## [0.2.0] - 2026-11-03
+
+### Breaking changes
+
+- Require Node.js 24 or newer. ([PR #6](https://github.com/SirDarcanos/pi-s1-compact/pull/6))
 
 ### Added
 
@@ -12,7 +18,7 @@ Version 0.1.0 is published on npm. Changes below Unreleased are not part of that
 
 ### Changed
 
-- Require Node.js 24 or newer and remove the Pi upper-version cap; the minimum Pi version remains 1.0.0.
+- Remove the Pi upper-version cap; the minimum Pi version remains 1.0.0.
 - Use S1 Compact branding and the active retrieval tool in new output markers.
 
 ### Security

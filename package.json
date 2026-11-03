@@ -1,6 +1,6 @@
 {
   "name": "pi-s1-compact",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "packageManager": "pnpm@11.20.0",
   "description": "Pi extension for classifier-driven context compaction and tool-output pruning, with persistent settings and original evidence retrieval",
   "keywords": ["pi-package", "pi-extension", "compaction", "context-management", "tool-output", "classifier", "ollama", "nimble"],
