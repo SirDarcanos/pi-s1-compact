@@ -6,6 +6,7 @@ import { affordableReductions, applyPruning, candidates, configuration, ENTRY_TY
 import { abortable, authenticateClassifier, defaultSettings, destinationLabel, registerLocalNimble, resolveClassifier, scoreClassifier, selectionWithAuth } from "../src/classifier.ts";
 import { fileSettingsStore, LOCAL_PROVIDER, type Settings, type SettingsStore } from "../src/settings.ts";
 import { activationConflict, ownedRetrievalTool } from "../src/activation.ts";
+import { registerConfiguredClassifiers } from "../src/configured-classifiers.ts";
 
 function nativeCheckpoint(branch: readonly SessionEntry[]): boolean {
   const latest = branch.findLast(entry => entry.type === "compaction"
@@ -32,10 +33,11 @@ function restoreLeaf(manager: ExtensionContext["sessionManager"], leaf: string |
 const compactTokens = (n: number) => n < 1000 ? n.toLocaleString() : `${(n / 1000).toFixed(n < 10000 ? 1 : 0).replace(/\.0$/, "")}k`;
 
 /** Tests inject storage and fetch; production always uses Pi's registry and user-global settings. */
-export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?: typeof fetch; store?: SettingsStore } = {}): void {
+export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?: typeof fetch; store?: SettingsStore; classifierCatalogPath?: string } = {}): void {
   const config = options.config ?? configuration();
   const retrievalTool = () => ownedRetrievalTool(pi);
   const providerError = registerLocalNimble(pi, config);
+  const catalogError = registerConfiguredClassifiers(pi, options.classifierCatalogPath);
   const store = options.store ?? fileSettingsStore();
   let settings: Settings | undefined;
   let settingsError = "Settings not loaded; scoring paused";
@@ -55,6 +57,7 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
   const paused = (ctx: ExtensionContext): string | undefined => {
     const conflict = activationConflict(pi);
     if (conflict) return conflict;
+    if (catalogError) return catalogError;
     if (settingsBusy) return "Settings change in progress";
     if (settingsError || !settings) return settingsError || "Settings unavailable";
     if (settings.classifier.provider === LOCAL_PROVIDER && providerError) return providerError;
@@ -310,6 +313,7 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     handler: async (args, ctx) => {
       if (args.trim()) { notify(ctx, "Usage: /s1-compact-settings", true); return; }
       if (!ctx.hasUI) { notify(ctx, "Settings require an interactive or RPC UI", true); return; }
+      if (catalogError) { notify(ctx, `${catalogError}. Repair ~/.pi/agent/s1-compact-classifiers.json and /reload.`, true); return; }
       if (settingsBusy) { notify(ctx, "Settings are already being edited", true); return; }
       settingsBusy = true;
       reset(); // Invalidate immediately; even failed writes or cancelled dialogs cannot commit old scoring.

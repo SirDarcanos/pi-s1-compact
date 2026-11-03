@@ -43,17 +43,17 @@ export async function boundedJson(response: Response, signal: AbortSignal): Prom
   }
 }
 
-export function parseNimbleWire(data: unknown, model: string, ids: readonly string[]): { probabilities: Record<string, number>; inputTokens: number; outputTokens: number } {
+export function parseNimbleWire(data: unknown, model: string, ids: readonly string[], legacyAliases = true): { probabilities: Record<string, number>; inputTokens: number; outputTokens: number } {
   if (!record(data) || !exactKeys(data, ["model", "answers", "usage",
     ...(Object.hasOwn(data, "prompt_eval_cached_count") ? ["prompt_eval_cached_count"] : [])])
     || (Object.hasOwn(data, "prompt_eval_cached_count")
       && (typeof data.prompt_eval_cached_count !== "number" || !Number.isSafeInteger(data.prompt_eval_cached_count)
         || data.prompt_eval_cached_count < 0))
     || typeof data.model !== "string" || !(data.model === model
-      || (model === "nimble" && data.model === "nimble:latest")
+      || (legacyAliases && ((model === "nimble" && data.model === "nimble:latest")
       || (model === "nimble:latest" && data.model === "nimble")
       || /^nimble-[a-z0-9.-]{1,100}$/i.test(data.model)
-      || /^bespokelabs\/Bespoke-Nimble-[a-z0-9.-]{1,100}$/i.test(data.model))
+      || /^bespokelabs\/Bespoke-Nimble-[a-z0-9.-]{1,100}$/i.test(data.model))))
     || !record(data.answers) || !exactKeys(data.answers, ids)
     || !record(data.usage) || !exactKeys(data.usage, ["input_tokens", "output_tokens"])) {
     throw new Error("Invalid Nimble response");

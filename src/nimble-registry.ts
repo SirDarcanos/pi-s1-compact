@@ -5,7 +5,7 @@ import { validateEndpoint } from "./engine/request.ts";
 /** Narrow Ollama adapter: Pi owns provider selection/auth; preserve the predecessor's raw wire checks.
  * No pi-ai API subpath import: Pi's extension loader aliases the package root to compat.js.
  */
-export const nimbleClassifier: ProviderClassifier = {
+function systemOneClassifier(legacyAliases: boolean): ProviderClassifier { return {
   async classify(model, context, options) {
     const result = { api: model.api, provider: model.provider, model: model.id, answers: {},
       stopReason: "stop" as "stop" | "error" | "aborted", timestamp: Date.now() };
@@ -13,7 +13,7 @@ export const nimbleClassifier: ProviderClassifier = {
       const images: unknown = Reflect.get(context, "images"); // Added to the SDK context after Pi 1.0.
       if ((images !== undefined && (!Array.isArray(images) || images.length > 0))
         || Object.values(context.questions).some(q => q.type !== "bool")) {
-        throw new Error("Ollama Nimble adapter accepts text boolean questions only");
+        throw new Error("Ollama System One adapter accepts text boolean questions only");
       }
       const signal = options?.signal ?? new AbortController().signal;
       signal.throwIfAborted();
@@ -30,7 +30,7 @@ export const nimbleClassifier: ProviderClassifier = {
         body: JSON.stringify(transformed ?? body), signal });
       if (!response.ok) { void response.body?.cancel().catch(() => {}); throw new Error(`Nimble HTTP ${response.status}`); }
       await options?.onResponse?.({ status: response.status, headers: Object.fromEntries(response.headers.entries()) }, model);
-      const wire = parseNimbleWire(await boundedJson(response, signal), model.id, Object.keys(context.questions));
+      const wire = parseNimbleWire(await boundedJson(response, signal), model.id, Object.keys(context.questions), legacyAliases);
       signal.throwIfAborted();
       const input = wire.inputTokens, output = wire.outputTokens;
       return { ...result, answers: Object.fromEntries(Object.entries(wire.probabilities).map(([id, probability]) => [id, { type: "bool" as const, probability }])),
@@ -41,4 +41,8 @@ export const nimbleClassifier: ProviderClassifier = {
         errorMessage: error instanceof Error ? error.message : "Invalid Nimble response" };
     }
   },
-};
+}; }
+
+export const nimbleClassifier = systemOneClassifier(true);
+/** Configured models require exact response identity, never Nimble's historical aliases. */
+export const ollamaSystemOneClassifier = systemOneClassifier(false);

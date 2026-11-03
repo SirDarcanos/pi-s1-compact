@@ -2,7 +2,7 @@
 
 Prune older tool outputs from Pi's working context while keeping the original evidence available.
 
-Pi System One Compact uses a classifier to decide which eligible outputs can become retrieval markers or shorter excerpts. Choose that classifier once, independently of your coding model. Local Ollama Nimble is the default; other classifiers come from Pi's registry.
+Pi System One Compact uses a classifier to decide which eligible outputs can become retrieval markers or shorter excerpts. Choose that classifier once, independently of your coding model. Local Ollama Nimble is the default. Add compatible Ollama classifiers through a user-global JSON catalog, or choose classifiers already in Pi's registry.
 
 [Installation](#installation) · [Quick start](#quick-start) · [Commands](#commands) · [Configuration](#configuration) · [Troubleshooting](#troubleshooting)
 
@@ -18,7 +18,7 @@ Restart Pi or run `/reload` to load the extension. The extension does not instal
 
 ## Quick start
 
-1. Have local Ollama with Nimble already running, or configure another classifier through [Pi's classifier registry](https://github.com/earendil-works/pi/blob/v1.0.0/packages/coding-agent/docs/models.md#use-classifier-models).
+1. Have local Ollama with Nimble already running, add compatible Clef/Perplexity Decider models using the [classifier catalog](https://github.com/SirDarcanos/pi-s1-compact/blob/main/docs/configuration.md#configure-additional-ollama-classifiers), or configure another classifier through [Pi's classifier registry](https://github.com/earendil-works/pi/blob/v1.0.0/packages/coding-agent/docs/models.md#use-classifier-models).
 2. Run `/s1-compact-settings`, choose a classifier, review its destination, and save. This dialog needs an interactive or compatible RPC UI.
 3. Leave automatic pruning enabled, or turn it off and use `/s1-compact` manually.
 4. Run `/s1-compact-status` to inspect the selection, reductions, and latest activity or error.
