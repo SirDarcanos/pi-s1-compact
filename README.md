@@ -127,4 +127,4 @@ Requests exclude private reasoning, images, tool-result metadata, and protected/
 
 [MIT](LICENSE) © 2026 **Nicola Mustone**. Reused code retains predecessor and upstream attribution in [NOTICE.md](NOTICE.md) and [licenses/](licenses/).
 
-Read the repository's [AGENTS.md](https://github.com/SirDarcanos/pi-s1-compact/blob/main/AGENTS.md) before project work. Record notable implemented changes in [CHANGELOG.md](CHANGELOG.md). Releases are published manually; no release automation or predecessor migration announcement is configured.
+Read the repository's [AGENTS.md](https://github.com/SirDarcanos/pi-s1-compact/blob/main/AGENTS.md) before project work. Record notable implemented changes in [CHANGELOG.md](CHANGELOG.md). Releases use a [manual staged-publishing workflow](https://github.com/SirDarcanos/pi-s1-compact/blob/main/docs/publishing.md): offline checks and tokenless npm OIDC staging, followed by SirDarcanos's separate 2FA approval on npm. Nothing publishes on merge, push, or tag creation. No predecessor migration announcement is configured.
