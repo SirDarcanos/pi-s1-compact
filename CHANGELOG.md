@@ -6,6 +6,12 @@ Release headings record prepared versions; public availability requires npm appr
 
 ## Unreleased
 
+## [0.2.1] - 2026-11-03
+
+### Added
+
+- Configure compatible Ollama System One classifiers through a user-global JSON catalog, without a personal registration extension, while retaining Nimble defaults and existing Pi registry selections. ([#8](https://github.com/SirDarcanos/pi-s1-compact/issues/8))
+
 ## [0.2.0] - 2026-11-03
 
 ### Breaking changes

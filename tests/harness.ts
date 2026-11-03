@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { SessionManager, type ExtensionAPI, type ExtensionContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { ClassifierContext, ClassifierModel, ClassifierApi, ClassifierResult, ModelsClassifierOptions } from "@earendil-works/pi-ai";
 import { registerS1 } from "../extensions/s1-compact.ts";
@@ -26,7 +29,7 @@ export function memoryStore(initial?: Settings): SettingsStore & { value?: Setti
 }
 export async function harness(options: { config?: Config; store?: SettingsStore; probability?: number;
   classify?: (model: Classifier, context: ClassifierContext, opts?: ModelsClassifierOptions) => Promise<ClassifierResult>;
-  fetch?: typeof fetch; manager?: SessionManager } = {}) {
+  fetch?: typeof fetch; manager?: SessionManager; classifierCatalogPath?: string } = {}) {
   const sm = options.manager ?? SessionManager.inMemory("/tmp/s1-fixture");
   for (const message of messages()) sm.appendMessage(message);
   const handlers = new Map<string, Array<(event: any, ctx: ExtensionContext) => any>>();
@@ -81,7 +84,7 @@ export async function harness(options: { config?: Config; store?: SettingsStore;
     const body = JSON.parse(String(init?.body));
     return Response.json({ model: body.model, answers: Object.fromEntries(Object.keys(body.questions).map(id=>[id,{type:"noul",noul:options.probability ?? 0.01}])), usage:{input_tokens:100,output_tokens:1} });
   }) as typeof fetch;
-  registerS1(pi, { config: options.config ?? config, store, fetch: fetcher });
+  registerS1(pi, { config: options.config ?? config, store, fetch: fetcher, classifierCatalogPath: options.classifierCatalogPath ?? join(tmpdir(), `s1-compact-absent-${randomUUID()}.json`) });
   async function fire(name: string, event: any = {}) {
     let result: any;
     for (const fn of handlers.get(name) ?? []) result = await fn(event,ctx);

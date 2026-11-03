@@ -29,9 +29,59 @@ Changing settings immediately aborts/invalidates in-flight scoring. Saving succe
 
 ## Local Nimble registry exposure
 
-The extension registers the narrowly scoped provider `s1-compact-ollama`, model `nimble`, with an Ollama adapter behind Pi's classifier registry at `http://127.0.0.1:11434/v1`. The adapter maps public boolean questions to the `noul` wire format used by Ollama's `/v1/systemone` and preserves strict raw-response model/schema validation before normalization. This avoids Pi's extension-loader limitation on API subpath imports. A dummy `ollama` key makes the keyless local provider available. Other classifiers use Pi's existing models and authentication; codemode is not required.
+The extension registers the narrowly scoped provider `s1-compact-ollama`, model `nimble`, with an Ollama adapter behind Pi's classifier registry at `http://127.0.0.1:11434/v1`. The adapter maps public boolean questions to the `noul` wire format used by Ollama's `/v1/systemone` and preserves strict raw-response model/schema validation before normalization. This avoids Pi's extension-loader limitation on API subpath imports. A dummy `ollama` key makes the keyless local provider available. Additional classifiers can use the catalog below or Pi's existing models and authentication; codemode is not required.
 
 The default local provider and second registry transport have offline wire-contract tests. Those prove integration behavior, **not live model availability, calibration, or pruning quality**. No hosted inference is needed for the test suite.
+
+## Configure additional Ollama classifiers
+
+Create **`~/.pi/agent/s1-compact-classifiers.json`** to register compatible classifiers without a TypeScript extension. This user-global catalog is separate from saved selection settings; project-local catalogs are not read. The file is optional and does not change the default Nimble selection.
+
+```json
+{
+  "version": 1,
+  "classifiers": [
+    {
+      "name": "clef",
+      "protocol": "ollama-systemone",
+      "model": "clef:latest",
+      "endpoint": "http://127.0.0.1:11434/v1/systemone",
+      "contextWindow": 8192
+    },
+    {
+      "name": "pplx",
+      "protocol": "ollama-systemone",
+      "model": "pplx-decider:latest",
+      "endpoint": "http://127.0.0.1:11434/v1/systemone",
+      "contextWindow": 8192
+    }
+  ]
+}
+```
+
+Replace each `model` with the exact installed model ID and set `contextWindow` to its supported token capacity (integer, at least 2000). The IDs above are examples, not model installation commands or claims of live compatibility. `name` must be unique, start with a lowercase letter, and contain only lowercase letters, digits, and hyphens (48 characters maximum). At most 32 entries are accepted; unknown fields are rejected.
+
+Run `/reload`, then `/s1-compact-settings`. Select `s1-compact-config-clef/clef:latest` or the corresponding provider/model, review the effective destination, and save. Providers are registered through Pi's classifier registry as `s1-compact-config-<name>`; existing registry classifiers remain available. These provider IDs are reserved for this catalog: do not register them in a personal extension too. The package contains its own adapter, so npm installations need no imports into a Git checkout or installation internals.
+
+### Supported protocol and capabilities
+
+`ollama-systemone` is the only catalog protocol currently supported. The endpoint must end in `/systemone` and use HTTPS or loopback HTTP, without credentials, query, or fragment. The adapter sends `POST` with `model`, `state`, and `questions`, mapping text boolean questions to `{ "type": "noul", ... }`. Responses must identify the exact configured model and contain one `{ "type": "noul", "noul": 0.0 }` probability per question, between 0 and 1, plus nonnegative integer `usage.input_tokens` and `usage.output_tokens`. The only optional top-level response field is nonnegative integer `prompt_eval_cached_count`; unexpected fields or missing answers are rejected.
+
+Clef and Perplexity Decider can use this path when their Ollama deployment implements that contract. A chat/completions endpoint, arbitrary model API, label-only classifier, or image input is not supported by this adapter. For another protocol, use an appropriate Pi classifier provider rather than changing the protocol label. Offline tests prove transport and selection behavior, not live model availability or pruning quality. Configured classifiers use the conservative non-Nimble request budget and threshold described in [safety](safety.md).
+
+### Credentials and reload errors
+
+Keyless local Ollama needs no extra field. If authentication is required, add `"apiKeyEnv": "MY_CLASSIFIER_KEY"` to that entry and export that environment variable before starting Pi. Put the secret in the environment, not the catalog; literal keys, headers, and shell commands are not accepted catalog fields. The resolved key is passed to Pi's provider registration in memory, not written to S1 Compact settings. Pi's normal authentication overrides still apply, and effective destination changes need renewed confirmation. A missing or empty named variable is an error, not permission to use the dummy local key.
+
+Catalog changes take effect on `/reload` or restart. Shell exports require restarting Pi from the updated environment. Invalid JSON, unsupported protocols/fields, missing credentials, or unreadable catalogs pause all new pruning and block settings edits until the catalog is repaired and reloaded. Existing reductions remain retrievable. Removing a selected entry leaves that saved selection unavailable; it never selects Nimble or another provider in its place.
+
+### Replace a personal registration shim
+
+1. Copy its exact model ID, System One endpoint, and supported context capacity into the catalog. Keep credentials in the environment using `apiKeyEnv` if needed.
+2. Remove the personal shim from Pi's extension configuration, then reload. Do not import the adapter from this package's internal files.
+3. Select the new `s1-compact-config-<name>` entry in `/s1-compact-settings` and confirm the destination. A saved selection under the old shim's provider ID is not automatically migrated.
+
+Existing independently registered Pi providers remain supported; migration is optional for them. This catalog does not install models, start services, edit Pi authentication, or authorize hosted calls.
 
 ## Environment configuration and precedence
 
