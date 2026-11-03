@@ -2,7 +2,19 @@
 
 A Pi extension that prunes older tool outputs while keeping the conversation and original evidence. Choose a classifier independently of your coding model, once in settings—not on every request.
 
-**Local successor under development.** This repository does not replace, rename, release, or deprecate `pi-nimble-compact`. Nothing is published by this work.
+A separate successor to `pi-nimble-compact`; it does not rename, publish, or deprecate that package.
+
+## Installation
+
+After `pi-s1-compact@0.1.0` is published to npm:
+
+```sh
+pi install npm:pi-s1-compact
+```
+
+Restart Pi or run `/reload`, then use `/s1-compact-settings` to review the classifier and destination. Local Ollama Nimble is the default; the extension does not install or start it.
+
+The npm package includes the `pi-package` keyword required for eligibility in the [Pi package gallery](https://pi.dev/packages). Gallery indexing and visibility must be checked after publication.
 
 ## Requirements and local development
 
@@ -115,4 +127,4 @@ Requests exclude private reasoning, images, tool-result metadata, and protected/
 
 [MIT](LICENSE) © 2026 **Nicola Mustone**. Reused code retains predecessor and upstream attribution in [NOTICE.md](NOTICE.md) and [licenses/](licenses/).
 
-Read [AGENTS.md](AGENTS.md) before project work. Record notable implemented changes in [CHANGELOG.md](CHANGELOG.md). This local build has no release version, publishing workflow, or migration announcement.
+Read the repository's [AGENTS.md](https://github.com/SirDarcanos/pi-s1-compact/blob/main/AGENTS.md) before project work. Record notable implemented changes in [CHANGELOG.md](CHANGELOG.md). Releases are published manually; no release automation or predecessor migration announcement is configured.

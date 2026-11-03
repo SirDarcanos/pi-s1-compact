@@ -1,15 +1,23 @@
 {
   "name": "pi-s1-compact",
-  "private": true,
+  "version": "0.1.0",
   "packageManager": "pnpm@11.20.0",
-  "description": "Pi System One Compact: persistent classifier selection for safe tool-output pruning",
+  "description": "Pi extension for classifier-driven context compaction and tool-output pruning, with persistent settings and original evidence retrieval",
+  "keywords": ["pi-package", "pi-extension", "compaction", "context-management", "tool-output", "classifier", "ollama", "nimble"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SirDarcanos/pi-s1-compact.git"
+  },
+  "homepage": "https://github.com/SirDarcanos/pi-s1-compact#readme",
+  "bugs": { "url": "https://github.com/SirDarcanos/pi-s1-compact/issues" },
+  "publishConfig": { "access": "public", "registry": "https://registry.npmjs.org/" },
   "type": "module",
   "license": "MIT",
   "author": "Nicola Mustone",
   "contributors": ["Nour Helmi", "tamaratran"],
   "engines": { "node": ">=22.19.0" },
   "pi": { "extensions": ["./extensions/s1-compact.ts"] },
-  "files": ["extensions", "src", "README.md", "LICENSE", "NOTICE.md", "licenses"],
+  "files": ["extensions", "src", "README.md", "CHANGELOG.md", "LICENSE", "NOTICE.md", "licenses"],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.ts",
