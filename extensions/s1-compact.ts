@@ -1,11 +1,11 @@
 // Adapted from pi-nimble-compact and pi-jev-compaction; see NOTICE.md and licenses/.
 import { Type } from "typebox";
-import { buildSessionContext, estimateTokens, type ExtensionAPI, type ExtensionContext, type SessionEntry, type SessionManager } from "@earendil-works/pi-coding-agent";
+import { buildSessionContext, estimateTokens, type ExtensionAPI, type ExtensionContext, type SessionEntry, type SessionManager, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { affordableReductions, applyPruning, candidates, configuration, ENTRY_TYPE, GROWTH_TOKENS,
   ledger, original, superseded, textOf, triggerTokens, truncationLedger, RequestBudgetError, type Config } from "../src/pruning.ts";
 import { abortable, authenticateClassifier, defaultSettings, destinationLabel, registerLocalNimble, resolveClassifier, scoreClassifier, selectionWithAuth } from "../src/classifier.ts";
 import { fileSettingsStore, LOCAL_PROVIDER, type Settings, type SettingsStore } from "../src/settings.ts";
-import { activationConflict } from "../src/activation.ts";
+import { activationConflict, ownedRetrievalTool } from "../src/activation.ts";
 
 function nativeCheckpoint(branch: readonly SessionEntry[]): boolean {
   const latest = branch.findLast(entry => entry.type === "compaction"
@@ -34,6 +34,7 @@ const compactTokens = (n: number) => n < 1000 ? n.toLocaleString() : `${(n / 100
 /** Tests inject storage and fetch; production always uses Pi's registry and user-global settings. */
 export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?: typeof fetch; store?: SettingsStore } = {}): void {
   const config = options.config ?? configuration();
+  const retrievalTool = () => ownedRetrievalTool(pi);
   const providerError = registerLocalNimble(pi, config);
   const store = options.store ?? fileSettingsStore();
   let settings: Settings | undefined;
@@ -61,7 +62,7 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     catch (error) { return error instanceof Error ? error.message : "Classifier unavailable"; }
   };
   const pauseReason = (ctx: ExtensionContext) => paused(ctx)
-    || (!pi.getActiveTools().includes("nimble_read") ? "nimble_read inactive"
+    || (!retrievalTool() ? "no active owned retrieval tool (s1_compact_read or compatibility alias nimble_read)"
       : nativeCheckpoint(ctx.sessionManager.getBranch()) ? "Codex checkpoint owns provider context"
       : !ctx.model ? "No model selected" : undefined);
   const scoringActivity = (ctx: ExtensionContext) => {
@@ -122,7 +123,7 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
   pi.on("model_select", invalidate);
 
   const startEvaluation = (ctx: ExtensionContext, manual = false): Promise<void> | undefined => {
-    if (paused(ctx) || controller || warned || !ctx.model || !pi.getActiveTools().includes("nimble_read")
+    if (paused(ctx) || controller || warned || !ctx.model || !retrievalTool()
       || (!manual && !settings?.automatic)) return;
     const scoringSettings = settings!;
     const classifier = resolveClassifier(ctx.modelRegistry, scoringSettings);
@@ -131,7 +132,7 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     const messages = buildSessionContext(branch).messages;
     const refs = ledger(branch), truncatedRefs = truncationLedger(branch);
     const rawTokens = messages.reduce((sum, m) => sum + estimateTokens(m), 0);
-    const projectedTokens = applyPruning(messages, refs, truncatedRefs).reduce((sum, m) => sum + estimateTokens(m), 0);
+    const projectedTokens = applyPruning(messages, refs, truncatedRefs, retrievalTool()).reduce((sum, m) => sum + estimateTokens(m), 0);
     const usageTokens = ctx.getContextUsage()?.tokens ?? 0;
     if (!manual && Math.max(projectedTokens, usageTokens) < triggerTokens(config, ctx.model.contextWindow)) return;
     if (!manual && rawTokens >= lastAttemptTokens && rawTokens - lastAttemptTokens < GROWTH_TOKENS) return;
@@ -149,16 +150,16 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
       try {
         // Authentication and destination consent gate deterministic pruning as well as classifier calls.
         await authenticateClassifier(ctx.modelRegistry, classifier, scoringSettings.classifier, evaluationSignal);
-        if (ownController.signal.aborted || epoch !== ownEpoch || settings !== scoringSettings || paused(ctx)) return;
+        if (ownController.signal.aborted || epoch !== ownEpoch || settings !== scoringSettings || paused(ctx) || !retrievalTool()) return;
         const result = uncertain.length
-          ? await scoreClassifier(ctx.modelRegistry, classifier, applyPruning(messages, refs, truncatedRefs), uncertain, config, evaluationSignal, options.fetch, scoringSettings.classifier)
+          ? await scoreClassifier(ctx.modelRegistry, classifier, applyPruning(messages, refs, truncatedRefs, retrievalTool()), uncertain, config, evaluationSignal, options.fetch, scoringSettings.classifier)
           : { refs: [] as string[], keptRefs: [] as string[], evaluated: 0, inputTokens: null };
         if (ownController.signal.aborted || epoch !== ownEpoch || settings !== scoringSettings || paused(ctx)
-          || !pi.getActiveTools().includes("nimble_read") || nativeCheckpoint(ctx.sessionManager.getBranch())) return;
+          || !retrievalTool() || nativeCheckpoint(ctx.sessionManager.getBranch())) return;
         // Credentials/provider availability may change while inference is running.
         await authenticateClassifier(ctx.modelRegistry, classifier, scoringSettings.classifier, evaluationSignal);
         if (ownController.signal.aborted || epoch !== ownEpoch || settings !== scoringSettings || paused(ctx)
-          || !pi.getActiveTools().includes("nimble_read") || nativeCheckpoint(ctx.sessionManager.getBranch())) return;
+          || !retrievalTool() || nativeCheckpoint(ctx.sessionManager.getBranch())) return;
         const currentBranch = ctx.sessionManager.getBranch();
         const snapshotIndex = snapshotLeaf ? currentBranch.findIndex(entry => entry.id === snapshotLeaf) : -1;
         if (snapshotLeaf && snapshotIndex < 0) return;
@@ -173,7 +174,7 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
         const toTruncate = config.truncateMinChars > 0 ? choices.filter(item => eligible.has(item.ref)
           && result.keptRefs.includes(item.ref) && !currentTruncated.has(item.ref)
           && textOf(item.result).length > config.truncateMinChars) : [];
-        const { cleared, truncated, saved } = affordableReductions(currentMessages, currentRefs, currentTruncated, accepted, toTruncate, config.maxPaybackTurns);
+        const { cleared, truncated, saved } = affordableReductions(currentMessages, currentRefs, currentTruncated, accepted, toTruncate, config.maxPaybackTurns, retrievalTool());
         const deferred = accepted.length + toTruncate.length - cleared.length - truncated.length;
         if (cleared.length || truncated.length) {
           const entry = { version: 1, refs: cleared.map(item => item.ref), truncatedRefs: truncated.map(item => item.ref),
@@ -208,9 +209,10 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
   pi.on("context", (event, ctx) => {
     updateStatus(ctx);
     if (activationConflict(pi)) { reset(); return; }
-    if (!pi.getActiveTools().includes("nimble_read") || nativeCheckpoint(ctx.sessionManager.getBranch())) return;
+    const tool = retrievalTool();
+    if (!tool || nativeCheckpoint(ctx.sessionManager.getBranch())) return;
     const branch = ctx.sessionManager.getBranch();
-    const projected = applyPruning(event.messages, ledger(branch), truncationLedger(branch));
+    const projected = applyPruning(event.messages, ledger(branch), truncationLedger(branch), tool);
     void startEvaluation(ctx);
     return { messages: projected };
   });
@@ -224,7 +226,7 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
       const reason = paused(ctx);
       if (reason) { notify(ctx, reason, true); return; }
       if (!ctx.model) { notify(ctx, "No model selected", true); return; }
-      if (!pi.getActiveTools().includes("nimble_read")) { notify(ctx, "Paused: nimble_read must be active", true); return; }
+      if (!retrievalTool()) { notify(ctx, "Paused: an owned s1_compact_read (or compatibility alias nimble_read) must be active", true); return; }
       if (nativeCheckpoint(ctx.sessionManager.getBranch())) { notify(ctx, "Paused: Codex checkpoint owns provider context", true); return; }
       if (controller) { notify(ctx, "An evaluation is already running", true); return; }
       warned = false;
@@ -236,11 +238,12 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
     },
   };
   pi.registerCommand("s1-compact", compactCommand);
-  pi.registerTool({
-    name: "nimble_read", label: "Read original output",
-    description: "Retrieve original tool output cleared or truncated by pi-s1-compact or pi-nimble from this session's active branch. Use the ref in its marker. Read original evidence rather than rerunning commands. offset and limit are character counts; maximum page 16000 characters.",
-    parameters: Type.Object({ ref: Type.String({ pattern: "^[a-f0-9]{24}$" }),
-      offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 16_000 })) }),
+  const readParameters = Type.Object({ ref: Type.String({ pattern: "^[a-f0-9]{24}$" }),
+    offset: Type.Optional(Type.Integer({ minimum: 0 })), limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 16_000 })) });
+  const readOriginal = {
+    name: "s1_compact_read", label: "Read original output",
+    description: "Retrieve original tool output cleared or truncated by pi-s1-compact from this session's active branch, including historical Nimble records. Use the ref in its marker. Read original evidence rather than rerunning commands. offset and limit are character counts; maximum page 16000 characters.",
+    parameters: readParameters,
     async execute(_id, args, _signal, _update, ctx) {
       const result = original(ctx.sessionManager.getBranch(), args.ref);
       if (!result) throw new Error("Original output is not on this session branch");
@@ -250,7 +253,10 @@ export function registerS1(pi: ExtensionAPI, options: { config?: Config; fetch?:
       return { content: [{ type: "text", text: `[Original ${result.toolName} output; characters ${offset}–${end} of ${text.length}]\n${text.slice(offset, end)}` }],
         details: { ref: args.ref, offset, nextOffset: end < text.length ? end : null, totalCharacters: text.length } };
     },
-  });
+  } satisfies ToolDefinition<typeof readParameters>;
+  pi.registerTool(readOriginal);
+  pi.registerTool({ ...readOriginal, name: "nimble_read",
+    description: "Compatibility alias for s1_compact_read for historical pi-nimble-compact markers. " + readOriginal.description });
   const resetCommand: Parameters<ExtensionAPI["registerCommand"]>[1] = {
     description: "Release existing cleared and shortened outputs on the active branch",
     handler: async (_args, ctx) => {

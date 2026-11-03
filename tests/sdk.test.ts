@@ -67,6 +67,7 @@ test("Pi's resource loader loads the actual package entrypoint", async t => {
   const loaded = loader.getExtensions();
   assert.deepEqual(loaded.errors, []);
   assert.equal(loaded.extensions.length, 1);
+  assert.ok(loaded.extensions[0]!.tools.has("s1_compact_read"));
   assert.ok(loaded.extensions[0]!.tools.has("nimble_read"));
   assert.ok(loaded.extensions[0]!.handlers.has("turn_end"));
 });
@@ -156,7 +157,7 @@ test("active Pi tool loop scores concurrently and prunes a later model request",
   assert.match(sent[0]!, /ORIGINAL_EVIDENCE/);
   assert.match(sent[1]!, /ORIGINAL_EVIDENCE/, "the next request must not wait for unfinished scoring");
   assert.doesNotMatch(sent[2]!, /ORIGINAL_EVIDENCE/);
-  assert.match(sent[2]!, /nimble_read/);
+  assert.match(sent[2]!, /s1_compact_read/);
   assert.match(evidence.content[0]!.text, /ORIGINAL_EVIDENCE/);
 });
 
@@ -420,6 +421,8 @@ for (const order of ["legacy-first","successor-first"] as const) {
       noSkills:true,noPromptTemplates:true,noThemes:true,noContextFiles:true});
     await loader.reload();
     assert.equal(loader.getExtensions().extensions.length,2);
+    assert.ok(loader.getExtensions().extensions.some(extension => extension.tools.has("s1_compact_read")),
+      "primary retrieval stays registered despite the historical alias collision");
     assert.equal(loader.getExtensions().errors.length,1);
     assert.match(loader.getExtensions().errors[0]!.error,/Tool "nimble_read" conflicts/);
     const runtime=await ModelRuntime.create({authPath:join(dir,"auth.json"),modelsPath:join(dir,"models.json"),modelsStorePath:join(dir,"models-store.json")});

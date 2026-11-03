@@ -2,9 +2,23 @@
 
 Record notable user-facing changes here under Unreleased as they are implemented.
 Use Keep a Changelog-style categories and the version policy in [AGENTS.md](https://github.com/SirDarcanos/pi-s1-compact/blob/main/AGENTS.md#versions-and-history).
-Version 0.1.0 is prepared for npm publication; registry availability is verified separately.
+Version 0.1.0 is published on npm. Changes below Unreleased are not part of that immutable package.
 
 ## Unreleased
+
+### Added
+
+- `s1_compact_read` as the primary original-output retrieval tool, with `nimble_read` retained as a shared-handler compatibility alias for historical markers and existing allowlists.
+
+### Changed
+
+- Require Node.js 24 or newer and remove the Pi upper-version cap; the minimum Pi version remains 1.0.0.
+- Use S1 Compact branding and the active retrieval tool in new output markers.
+
+### Security
+
+- Verify retrieval-tool ownership before pruning, using the owned alias or retaining full outputs when another extension owns a colliding name.
+- Override vulnerable development dependencies with undici 8.12.2 and minimatch 11.0.1, including isolated compatibility installs; installed Pi hosts must be updated separately.
 
 ## [0.1.0] - 2026-11-03
 

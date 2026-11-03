@@ -100,7 +100,7 @@ test("one unavailable classifier destination does not block selecting another re
 
 test("status reports retrieval, native checkpoints, missing main model and in-flight scoring truthfully",async()=>{
   const h=await harness();h.active([]);
-  await h.command("s1-compact-status");assert.match(h.notices.at(-1)!,/Scoring: paused · nimble_read inactive/);
+  await h.command("s1-compact-status");assert.match(h.notices.at(-1)!,/Scoring: paused · no active owned retrieval tool/);
   h.active(["nimble_read"]);(h.ctx as any).model=undefined;
   await h.command("s1-compact-status");assert.match(h.notices.at(-1)!,/Scoring: paused · No model selected/);
   (h.ctx as any).model={contextWindow:100000};
@@ -248,7 +248,7 @@ test("legacy session replay, exact paged retrieval, branch reset and disabled re
   const h=await harness(); const result=context(h).find(m=>m.role==="toolResult")! as any;
   const ref=reference(result), bytes=textOf(result);
   h.sm.appendCustomEntry(ENTRY_TYPE,{version:1,refs:[ref]});
-  let projected=await h.fire("context",{messages:context(h)});assert.match(JSON.stringify(projected.messages),/nimble_read/);
+  let projected=await h.fire("context",{messages:context(h)});assert.match(JSON.stringify(projected.messages),/s1_compact_read/);
   const got=await h.tools.get("nimble_read")!.execute("read",{ref,offset:12,limit:40},undefined as any,undefined as any,h.ctx as any);
   assert.ok((got.content[0] as any).text.endsWith(bytes.slice(12,52)));
   assert.equal(original(h.sm.getBranch(),ref)?.content[0]!.type,"text");

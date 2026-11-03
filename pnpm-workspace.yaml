@@ -1,0 +1,8 @@
+packages:
+  - .
+
+# Pi 1.4.0 pins vulnerable transitive versions. These overrides apply to this
+# repository's development/check installs, not to users' separately installed Pi.
+overrides:
+  undici: 8.12.2
+  minimatch: 11.0.1

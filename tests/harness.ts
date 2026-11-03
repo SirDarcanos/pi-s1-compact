@@ -34,8 +34,9 @@ export async function harness(options: { config?: Config; store?: SettingsStore;
   const notices: string[] = [], statuses: Array<string | undefined> = [], sent: ClassifierContext[] = [];
   const modelList: Classifier[] = [structuredClone(second)];
   const store = options.store ?? memoryStore();
-  let active = ["nimble_read"], extraCommands: any[] = [], unavailable = false;
+  let active = ["s1_compact_read", "nimble_read"], extraCommands: any[] = [], unavailable = false;
   const authBaseUrls = new Map<string, string>();
+  const toolOwners = new Map<string, string>();
   const selectAnswers: Array<string | undefined> = [], confirmations: boolean[] = [];
   const registry = {
     async refresh(_options?: { signal?: AbortSignal }) {},
@@ -70,6 +71,7 @@ export async function harness(options: { config?: Config; store?: SettingsStore;
     appendEntry(type: string, data: unknown) { sm.appendCustomEntry(type, data); },
     registerCommand(name: string, c: any) { commands.set(name, c); }, registerTool(t: ToolDefinition) { tools.set(t.name,t); },
     getActiveTools() { return active; },
+    getAllTools() { return [...tools.values()].map(tool => ({ ...tool, sourceInfo: { path: toolOwners.get(tool.name) ?? "/successor.ts" } })); },
     getCommands() { return [...commands.keys()].map(name=>({name,source:"extension",sourceInfo:{path:"/successor.ts"}})).concat(extraCommands); },
     registerProvider(provider: string, p: any) {
       modelList.push(...p.models.map((m: any)=>({...m,provider,baseUrl:p.baseUrl} as ClassifierModel<ClassifierApi>)));
@@ -91,6 +93,7 @@ export async function harness(options: { config?: Config; store?: SettingsStore;
   return { sm, pi, ctx, handlers, commands, tools, notices, statuses, sent, store, modelList, registry, selectAnswers, confirmations, fire,
     command: (name: string, args = "") => commands.get(name).handler(args,ctx),
     active(names: string[]) { active = names; }, unavailable(value = true) { unavailable = value; },
+    toolOwner(name: string, path: string) { toolOwners.set(name, path); },
     authDestination(provider: string, baseUrl: string) { authBaseUrls.set(provider, baseUrl); },
     foreign(path = "/renamed-copy.ts") { extraCommands = ["nimble-compact:2","nimble-status:2","nimble-reset:2"].map(name=>({name,source:"extension",sourceInfo:{path}})); },
   };

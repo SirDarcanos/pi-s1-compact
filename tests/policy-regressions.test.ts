@@ -94,7 +94,7 @@ test("candidate selection protects recent batches, errors, skills, images, tool 
     ...pair("nested-field", "read", { credentials: { password: "correct horse battery staple" } }),
     ...pair("env-field", "read", { env: { NIMBLE_API_KEY: "opaquecredential123456" } }),
     ...pair("credential", "bash", { command: "cat ~/.aws/credentials" }), ...secretOutput, ...partialKey,
-    ...pair("job", "bg_agent"), ...pair("retrieval", "nimble_read"), ...pair("orphan").slice(1),
+    ...pair("job", "bg_agent"), ...pair("retrieval", "nimble_read"), ...pair("s1-retrieval", "s1_compact_read"), ...pair("orphan").slice(1),
     reversed[1]!, reversed[0]!, mismatch[0]!, mismatch[1]!, separated[0]!,
     { role: "user" as const, content: "unrelated turn", timestamp: 2 }, separated[1]!,
     ...pair("duplicate"), ...pair("duplicate"), ...malformedDuplicates, messages.at(-1)!];
@@ -209,7 +209,7 @@ test("projection keeps message order, calls, signatures, metadata and originals;
     if (messages[i] !== candidate.result) assert.equal(projected[i], messages[i]);
     else {
       assert.deepEqual({ ...projected[i], content: [] }, { ...messages[i], content: [] });
-      assert.match(textOf(projected[i] as ToolResult), /nimble_read/);
+      assert.match(textOf(projected[i] as ToolResult), /s1_compact_read/);
       assert.match(textOf(projected[i] as ToolResult), /Do not rerun/);
     }
   }
